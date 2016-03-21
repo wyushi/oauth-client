@@ -7,21 +7,22 @@ var express = require('express'),
 
 
 router.get('/', function(req, res, next) {
-  res.redirect('http://192.168.99.100:3000/oauth2/authorize' + 
-    '?client_id=yushi6' + 
+  res.redirect('http://192.168.99.100:3000/authorize' + 
+    '?client_id=oauth_client' + 
     '&response_type=code' + 
-    '&redirect_uri=http://192.168.99.100:8080/api/oauth');
+    '&redirect_uri=http://192.168.99.100:8080/lamp/oauth' + 
+    '&state=xyz');
 });
 
-router.get('/oauth', function (req, res, next) {
+router.get('/oauth',  function(req, res, next) {
     if (req.query.code) {
         console.log("auth_code:" + req.query.code);
         requestAccessToken(req.query.code, function (data) {
             var ret = JSON.parse(data),
                 accessToken = ret['access_token'];
-            console.log('accessToken: ' + accessToken.value);
-            getArticles(accessToken.value, function (articles) {
-                res.send(articles);
+            console.log('accessToken: ' + accessToken);
+            getUserInfo(accessToken, function (data) {
+                res.send(data);
             });
         });
     } else {
@@ -30,11 +31,11 @@ router.get('/oauth', function (req, res, next) {
     }
 });
 
-function getArticles(accessToken, callback) {
+function getUserInfo(accessToken, callback) {
     var options = {
         host: '192.168.99.100',
         port: '3000',
-        path: '/api/articles',
+        path: '/users/yushi',
         headers: {
             'Authorization': 'Bearer ' + accessToken
         }
@@ -53,16 +54,16 @@ function getArticles(accessToken, callback) {
 }
 
 function requestAccessToken(code, callback) {
-    var auth = 'Basic ' + new Buffer("yushi6:wys8833").toString('base64');
+    var auth = 'Basic ' + new Buffer("oauth_client:oauth_client_secret").toString('base64');
     var post_data = querystring.stringify({
         code: code,
         grant_type: 'authorization_code',
-        redirect_uri: 'http://192.168.99.100:8080/api/oauth'
+        redirect_uri: 'http://192.168.99.100:8080/lamp/oauth'
     });
     var post_options = {
         host: '192.168.99.100',
         port: '3000',
-        path: '/oauth2/token',
+        path: '/token',
         method: 'POST',
         headers: {
             'Authorization': auth,
@@ -82,4 +83,6 @@ function requestAccessToken(code, callback) {
     req.end();
 }
 
+
 module.exports = router;
+

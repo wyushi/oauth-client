@@ -1,10 +1,11 @@
-var express = require('express');
-var path = require('path');
-var logger = require('morgan');
-var bodyParser = require('body-parser');
-var routes = require('./routes/index');
-var favicon = require('serve-favicon');
-var app = express();
+var express = require('express'),
+    path = require('path'),
+    logger = require('morgan'),
+    bodyParser = require('body-parser'),
+    routes = require('./routes/index'),
+    lampRoutes = require('./routes/lamp'),
+    favicon = require('serve-favicon'),
+    app = express();
 
 // uncomment after placing your favicon in /public
 app.use(logger('dev'));
@@ -14,6 +15,7 @@ app.use(express.static(path.join(__dirname, '../client-side')));
 app.use(favicon(path.join(__dirname, '../client-side/favicon.ico')));
 
 app.use('/api/', routes);
+app.use('/lamp/', lampRoutes);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
