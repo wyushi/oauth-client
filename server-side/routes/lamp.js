@@ -48,17 +48,18 @@ router.get('/oauth',  function(req, res, next) {
     }
 });
 
-router.get('/profile', function (req, res) {
-  getUserInfo(token, function (data) {
+router.get('/profile/:username', function (req, res) {
+  var username = req.params.username;
+  getUserInfo(username, token, function (data) {
     res.send(data);
   });
 })
 
-function getUserInfo(accessToken, callback) {
+function getUserInfo(username, accessToken, callback) {
     var options = {
         host: '192.168.99.100',
         port: 4000,
-        path: '/users/yushi',
+        path: '/users/' + username,
         headers: {
             'Authorization': 'Bearer ' + accessToken
         }
