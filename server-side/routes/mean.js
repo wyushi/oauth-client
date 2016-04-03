@@ -35,7 +35,7 @@ router.get('/oauth', function (req, res) {
       var ret = JSON.parse(data),
           accessToken = ret['access_token'];
       token = accessToken;
-      res.render('token', { accessToken: accessToken });
+      res.render('mean_token', { accessToken: accessToken });
     });
   }
   else if (req.query.error) {

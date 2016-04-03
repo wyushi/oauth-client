@@ -3,14 +3,30 @@
 var express = require('express'),
     router = express.Router(),
     http = require('http'),
-    querystring = require('querystring');
+    querystring = require('querystring'),
+    oauth = {
+      host: '192.168.99.100',
+      port: 4000,
+      routes: {
+        authorize: '/oauth2/authorize',
+        token: '/oauth2/token'
+      },
+      client: {
+        username: 'oauth_client',
+        password: 'oauth_client_secret',
+        redirect: 'http://192.168.99.100:8080/lamp/oauth'
+      }
+    },
+    token = undefined;
 
 
 router.get('/', function(req, res, next) {
-  res.redirect('http://192.168.99.100:3000/authorize' + 
-    '?client_id=oauth_client' + 
-    '&response_type=code' + 
-    '&redirect_uri=http://192.168.99.100:8080/lamp/oauth' + 
+  var url = 'http://' + oauth.host  + ':' + oauth.port
+            + oauth.routes.authorize;
+  res.redirect(url +
+    '?client_id=' + oauth.client.username +
+    '&response_type=' + 'code' +
+    '&redirect_uri=' + oauth.client.redirect +
     '&state=xyz');
 });
 
@@ -20,21 +36,28 @@ router.get('/oauth',  function(req, res, next) {
         requestAccessToken(req.query.code, function (data) {
             var ret = JSON.parse(data),
                 accessToken = ret['access_token'];
-            console.log('accessToken: ' + accessToken);
-            getUserInfo(accessToken, function (data) {
-                res.send(data);
-            });
+            token = accessToken;
+            res.render('lamp_token', { res: ret });
         });
-    } else {
-        console.log('req: ' + req);
-        res.send("hello word");
+    }
+    else if (req.query.error) {
+      res.send(req.query.error_description);
+    }
+    else {
+      res.send(req);
     }
 });
+
+router.get('/profile', function (req, res) {
+  getUserInfo(token, function (data) {
+    res.send(data);
+  });
+})
 
 function getUserInfo(accessToken, callback) {
     var options = {
         host: '192.168.99.100',
-        port: '3000',
+        port: 4000,
         path: '/users/yushi',
         headers: {
             'Authorization': 'Bearer ' + accessToken
@@ -54,35 +77,34 @@ function getUserInfo(accessToken, callback) {
 }
 
 function requestAccessToken(code, callback) {
-    var auth = 'Basic ' + new Buffer("oauth_client:oauth_client_secret").toString('base64');
-    var post_data = querystring.stringify({
-        code: code,
-        grant_type: 'authorization_code',
-        redirect_uri: 'http://192.168.99.100:8080/lamp/oauth'
-    });
-    var post_options = {
-        host: '192.168.99.100',
-        port: '3000',
-        path: '/token',
-        method: 'POST',
-        headers: {
-            'Authorization': auth,
-            'Content-Length': Buffer.byteLength(post_data),
-            'Content-Type': 'application/x-www-form-urlencoded'
-        }
-    };
-    var req = http.request(post_options, function (res) {
-        res.setEncoding('utf8');
-        res.on('data', (chunk) => {
-            callback(chunk);
+    var basicAuth = oauth.client.username + ':' + oauth.client.password,
+        auth = 'Basic ' + new Buffer(basicAuth).toString('base64'),
+        post_data = querystring.stringify({
+          code: code,
+          grant_type: 'authorization_code',
+          redirect_uri: oauth.client.redirect
+        }),
+        post_options = {
+          host: oauth.host,
+          port: oauth.port,
+          path: oauth.routes.token,
+          method: 'POST',
+          headers: {
+              'Authorization': auth,
+              'Content-Length': Buffer.byteLength(post_data),
+              'Content-Type': 'application/x-www-form-urlencoded'
+          }
+        },
+        req = http.request(post_options, function (res) {
+          res.setEncoding('utf8');
+          res.on('data', (chunk) => {
+              callback(chunk);
+          });
+          res.on('end', () => {});
         });
-        res.on('end', () => {});
-    });
 
     req.write(post_data);
     req.end();
 }
 
-
 module.exports = router;
-
